@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Histórico de Entregas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body { font-family: Arial; background: #f4f6f9; margin: 0; }
+
+header {
+    background: #2c7be5;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-size: 20px;
+}
+
+.container {
+    max-width: 500px;
+    margin: auto;
+    padding: 15px;
+}
+
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    transition: 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.01);
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: white;
+    margin-right: 5px;
+}
+
+.piloto { background: #28a745; }
+.acomp { background: #6c757d; }
+
+.info {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #444;
+}
+
+.valor {
+    margin-top: 8px;
+    font-weight: bold;
+    color: #2c7be5;
+}
+
+.det-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.top-bar {
+    background: #1a5edb;
+    padding: 10px;
+    text-align: center;
+}
+
+.top-bar a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.empty {
+    text-align: center;
+    color: #777;
+    margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<header>📜 Histórico de Entregas</header>
+
+<div class="top-bar">
+    <a href="/">← Voltar</a>
+</div>
+
+<div class="container">
+
+{% if entregas %}
+    {% for e in entregas %}
+    <a href="/detalhes/{{ e[0] }}" class="det-link">
+        <div class="card">
+
+            <span class="badge piloto">{{ e[1] }}</span>
+            <span class="badge acomp">{{ e[2] }}</span>
+
+            <div class="info">📍 {{ e[3] }}</div>
+            <div class="info">⏰ {{ e[4] }} → {{ e[5] }}</div>
+            <div class="info">📅 {{ e[6] }}</div>
+
+            <div class="valor">💰 R$ {{ e[7] }}</div>
+
+        </div>
+    </a>
+    {% endfor %}
+{% else %}
+    <div class="empty">
+        Nenhuma entrega registrada ainda 🚫
+    </div>
+{% endif %}
+
+</div>
+
+</body>
+</html>

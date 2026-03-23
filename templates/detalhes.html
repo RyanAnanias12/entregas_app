@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Detalhes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial; background: #f4f6f9; margin: 0; }
+header { background: #2c7be5; color: white; padding: 15px; text-align: center; }
+.container { max-width: 500px; margin: auto; padding: 15px; }
+.card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+.badge { padding: 5px 10px; border-radius: 6px; color: white; }
+.piloto { background: #28a745; }
+.acomp { background: #6c757d; }
+.btn { width: 100%; padding: 12px; border: none; border-radius: 8px; margin-top: 10px; cursor: pointer; }
+.edit { background: #ffc107; }
+.delete { background: #dc3545; color: white; }
+.back { display: block; margin-top: 10px; text-align: center; color: #2c7be5; text-decoration: none; }
+</style>
+</head>
+
+<body>
+
+<header>📋 Detalhes</header>
+
+<div class="container">
+<div class="card">
+
+<span class="badge piloto">{{ entrega[1] }}</span>
+<span class="badge acomp">{{ entrega[2] }}</span>
+
+<p>📍 {{ entrega[3] }}</p>
+<p>⏰ {{ entrega[4] }} → {{ entrega[5] }}</p>
+<p>📅 {{ entrega[6] }}</p>
+<p>💰 R$ {{ entrega[7] }}</p>
+
+<a href="/editar/{{ entrega[0] }}">
+<button class="btn edit">✏️ Editar</button>
+</a>
+
+<a href="/delete/{{ entrega[0] }}" onclick="return confirm('Tem certeza?')">
+<button class="btn delete">🗑️ Deletar</button>
+</a>
+
+<a href="/" class="back">← Voltar</a>
+
+</div>
+</div>
+
+</body>
+</html>
