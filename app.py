@@ -1,31 +1,36 @@
+import os
+import psycopg2
 from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
 from datetime import date
 
 app = Flask(__name__)
 
-# CONEXÃO COM BANCO
-def get_db():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+# CONEXÃO COM POSTGRES
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# CRIAR BANCO
+def get_db():
+    return psycopg2.connect(DATABASE_URL)
+
+# CRIAR TABELA
 def init_db():
     conn = get_db()
-    conn.execute('''
+    cur = conn.cursor()
+
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS entregas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             piloto TEXT NOT NULL,
             acompanhante TEXT NOT NULL,
             ponto_coleta TEXT NOT NULL,
             hora_retirada TEXT,
             hora_finalizacao TEXT,
             data_entrega TEXT,
-            valor REAL
+            valor NUMERIC
         )
     ''')
+
     conn.commit()
+    cur.close()
     conn.close()
 
 init_db()
@@ -34,27 +39,21 @@ init_db()
 @app.route('/')
 def index():
     conn = get_db()
+    cur = conn.cursor()
 
-    entregas = conn.execute("""
-        SELECT * FROM entregas 
-        ORDER BY id DESC 
-        LIMIT 3
-    """).fetchall()
+    cur.execute("SELECT * FROM entregas ORDER BY id DESC LIMIT 3")
+    entregas = cur.fetchall()
 
-    resumo = conn.execute("""
-        SELECT 
-            COUNT(*) as total_rotas,
-            COALESCE(SUM(valor),0) as total_valor
-        FROM entregas
-    """).fetchone()
+    cur.execute("SELECT COUNT(*), COALESCE(SUM(valor),0) FROM entregas")
+    total_rotas, total_valor = cur.fetchone()
 
     conn.close()
 
     return render_template(
         'index.html',
         entregas=entregas,
-        total_rotas=resumo['total_rotas'],
-        total_valor=resumo['total_valor'],
+        total_rotas=total_rotas,
+        total_valor=total_valor,
         date=date
     )
 
@@ -62,41 +61,39 @@ def index():
 @app.route('/historico')
 def historico():
     conn = get_db()
+    cur = conn.cursor()
 
-    entregas = conn.execute("""
-        SELECT * FROM entregas 
-        ORDER BY id DESC
-    """).fetchall()
+    cur.execute("SELECT * FROM entregas ORDER BY id DESC")
+    entregas = cur.fetchall()
 
     conn.close()
-
     return render_template('historico.html', entregas=entregas)
 
-# ADICIONAR ENTREGA
+# ADD
 @app.route('/add', methods=['POST'])
 def add():
-    data = request.form
+    d = request.form
 
-    # validação
-    if data['piloto'] == data['acompanhante']:
+    if d['piloto'] == d['acompanhante']:
         return "Erro: Piloto e acompanhante não podem ser iguais!"
 
     conn = get_db()
+    cur = conn.cursor()
 
-    conn.execute('''
+    cur.execute('''
         INSERT INTO entregas (
             piloto, acompanhante, ponto_coleta,
             hora_retirada, hora_finalizacao,
             data_entrega, valor
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
     ''', (
-        data['piloto'],
-        data['acompanhante'],
-        data['ponto'],
-        data['retirada'],
-        data['finalizacao'],
-        data['data_entrega'],
-        data['valor']
+        d['piloto'],
+        d['acompanhante'],
+        d['ponto'],
+        d['retirada'],
+        d['finalizacao'],
+        d['data_entrega'],
+        d['valor']
     ))
 
     conn.commit()
@@ -108,83 +105,72 @@ def add():
 @app.route('/detalhes/<int:id>')
 def detalhes(id):
     conn = get_db()
+    cur = conn.cursor()
 
-    entrega = conn.execute(
-        "SELECT * FROM entregas WHERE id = ?",
-        (id,)
-    ).fetchone()
+    cur.execute("SELECT * FROM entregas WHERE id = %s", (id,))
+    entrega = cur.fetchone()
 
     conn.close()
 
-    if entrega is None:
+    if not entrega:
         return "Entrega não encontrada"
 
     return render_template('detalhes.html', entrega=entrega)
 
-# EDITAR ENTREGA
+# EDITAR
 @app.route('/editar/<int:id>', methods=['GET', 'POST'])
 def editar(id):
     conn = get_db()
+    cur = conn.cursor()
 
     if request.method == 'POST':
-        data = request.form
+        d = request.form
 
-        if data['piloto'] == data['acompanhante']:
-            return "Erro: Piloto e acompanhante não podem ser iguais!"
+        if d['piloto'] == d['acompanhante']:
+            return "Erro!"
 
-        conn.execute('''
+        cur.execute('''
             UPDATE entregas SET
-                piloto=?,
-                acompanhante=?,
-                ponto_coleta=?,
-                hora_retirada=?,
-                hora_finalizacao=?,
-                data_entrega=?,
-                valor=?
-            WHERE id=?
+                piloto=%s,
+                acompanhante=%s,
+                ponto_coleta=%s,
+                hora_retirada=%s,
+                hora_finalizacao=%s,
+                data_entrega=%s,
+                valor=%s
+            WHERE id=%s
         ''', (
-            data['piloto'],
-            data['acompanhante'],
-            data['ponto'],
-            data['retirada'],
-            data['finalizacao'],
-            data['data_entrega'],
-            data['valor'],
+            d['piloto'],
+            d['acompanhante'],
+            d['ponto'],
+            d['retirada'],
+            d['finalizacao'],
+            d['data_entrega'],
+            d['valor'],
             id
         ))
 
         conn.commit()
         conn.close()
-
         return redirect(url_for('index'))
 
-    entrega = conn.execute(
-        "SELECT * FROM entregas WHERE id = ?",
-        (id,)
-    ).fetchone()
+    cur.execute("SELECT * FROM entregas WHERE id = %s", (id,))
+    entrega = cur.fetchone()
 
     conn.close()
-
-    if entrega is None:
-        return "Entrega não encontrada"
-
     return render_template('editar.html', entrega=entrega)
 
-# DELETAR ENTREGA
+# DELETE
 @app.route('/delete/<int:id>')
 def delete(id):
     conn = get_db()
+    cur = conn.cursor()
 
-    conn.execute(
-        "DELETE FROM entregas WHERE id = ?",
-        (id,)
-    )
-
+    cur.execute("DELETE FROM entregas WHERE id = %s", (id,))
     conn.commit()
     conn.close()
 
     return redirect(url_for('index'))
 
-# START
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
